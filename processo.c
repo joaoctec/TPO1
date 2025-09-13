@@ -1,159 +1,144 @@
-// Arquivo: processo.c
-// Implementação das funções para manipulação dos dados de processos
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include "processo.h"
 
-// Função auxiliar para converter uma data em dias desde um ponto de referência
-int dataParaDias(const char *dataStr) {
-    if (dataStr == NULL || strlen(dataStr) == 0) {
-        return -1;
-    }
-    int ano, mes, dia;
-    if (sscanf(dataStr, "%d-%d-%d", &ano, &mes, &dia) == 3) {
-        return ano * 365 + mes * 30 + dia;
-    }
-    return -1;
+// --- util ----
+
+static void strip_crlf(char *s){
+    if (!s) return;
+    size_t n = strlen(s);
+    while (n && (s[n-1] == '\n' || s[n-1] == '\r')) s[--n] = '\0';
 }
 
-// 1. O número de processos presentes na base de dados
-// Função para ler dados de um arquivo CSV e popular um array de structs
-Processo *lerDados(const char *nomeArquivo, int *totalProcessos) {
+// Converte "YYYY-MM-DD" para dias desde 1970-01-01 usando mktime.
+// Retorna -1 se string vazia ou inválida.
+int dataParaDias(const char *iso8601){
+    if (!iso8601 || !*iso8601) return -1;
+    int y, m, d;
+    if (sscanf(iso8601, "%d-%d-%d", &y, &m, &d) != 3) return -1;
+    struct tm t = {0};
+    t.tm_year = y - 1900;
+    t.tm_mon  = m - 1;
+    t.tm_mday = d;
+    t.tm_isdst = -1;
+    time_t seconds = mktime(&t);
+    if (seconds == (time_t)-1) return -1;
+    return (int)(seconds / 86400);
+}
+
+// Divide a linha em até `max_cols` campos separados por ';', preservando
+// campos vazios. Escreve em `out[col]` strings já sem CR/LF.
+static int split_semicolon(char *linha, char **out, int max_cols){
+    int col = 0;
+    char *p = linha;
+    while (col < max_cols && p){
+        char *sep = strchr(p, ';');
+        if (sep){
+            *sep = '\n';           // marca fim temporário
+            strip_crlf(p);
+            out[col++] = p;
+            p = sep + 1;
+        }else{
+            strip_crlf(p);
+            out[col++] = p;
+            p = NULL;
+        }
+    }
+    // completa campos faltantes como vazios
+    while (col < max_cols) out[col++] = "";
+    return col;
+}
+
+// --- leitura ----
+
+Processo *lerDados(const char *nomeArquivo, int *totalProcessos){
     FILE *fp = fopen(nomeArquivo, "r");
-    if (fp == NULL) {
+    if (!fp){
         printf("ERRO: Nao foi possivel abrir o arquivo %s.\n", nomeArquivo);
         exit(ERRO);
     }
 
-    Processo *processos = (Processo *)malloc(MAX_PROCESSOS * sizeof(Processo));
-    if (processos == NULL) {
-        printf("ERRO: Nao foi possivel alocar memoria para os processos.\n");
+    Processo *processos = (Processo*)calloc(MAX_PROCESSOS, sizeof(Processo));
+    if (!processos){
+        printf("ERRO: Nao foi possivel alocar memoria.\n");
         exit(ERRO);
     }
 
     char linha[TAM_LINHA];
-    fgets(linha, TAM_LINHA, fp); // Ignora a linha de cabeçalho
+    // cabeçalho
+    if (!fgets(linha, sizeof(linha), fp)){
+        fclose(fp);
+        *totalProcessos = 0;
+        return processos;
+    }
 
     int i = 0;
-    while (fgets(linha, TAM_LINHA, fp)!= NULL && i < MAX_PROCESSOS) {
-        char *token;
-        char *rest = linha;
+    const int NUM_COLS = 27; // conforme enunciado/arquivo
+    while (i < MAX_PROCESSOS && fgets(linha, sizeof(linha), fp)){
+        char *cols[27];
+        split_semicolon(linha, cols, NUM_COLS);
 
-        token = strtok(rest, ";\n");
-        processos[i].id_processo = (token)? atoll(token) : 0;
-        
-        token = strtok(NULL, ";\n");
-        if (token) strncpy(processos[i].numero_sigilo, token, sizeof(processos[i].numero_sigilo) - 1);
-        
-        token = strtok(NULL, ";\n");
-        if (token) strncpy(processos[i].sigla_grau, token, sizeof(processos[i].sigla_grau) - 1);
-        
-        token = strtok(NULL, ";\n");
-        if (token) strncpy(processos[i].procedimento, token, sizeof(processos[i].procedimento) - 1);
-        
-        token = strtok(NULL, ";\n");
-        if (token) strncpy(processos[i].ramo_justica, token, sizeof(processos[i].ramo_justica) - 1);
-        
-        token = strtok(NULL, ";\n");
-        if (token) strncpy(processos[i].sigla_tribunal, token, sizeof(processos[i].sigla_tribunal) - 1);
-        
-        token = strtok(NULL, ";\n");
-        processos[i].id_tribunal = (token)? atoi(token) : 0;
-        
-        token = strtok(NULL, ";\n");
-        processos[i].recurso = (token)? atoi(token) : 0;
-        
-        token = strtok(NULL, ";\n");
-        processos[i].id_ultimo_oj = (token)? atoi(token) : 0;
-        
-        token = strtok(NULL, ";\n");
-        if (token) strncpy(processos[i].dt_recebimento, token, sizeof(processos[i].dt_recebimento) - 1);
-        
-        token = strtok(NULL, ";\n");
-        processos[i].id_ultima_classe = (token)? atoi(token) : 0;
-        
-        token = strtok(NULL, ";\n");
-        processos[i].flag_violencia_domestica = (token)? atoi(token) : 0;
-        
-        token = strtok(NULL, ";\n");
-        processos[i].flag_feminicidio = (token)? atoi(token) : 0;
-        
-        token = strtok(NULL, ";\n");
-        processos[i].flag_ambiental = (token)? atoi(token) : 0;
-        
-        token = strtok(NULL, ";\n");
-        processos[i].flag_quilombolas = (token)? atoi(token) : 0;
-        
-        token = strtok(NULL, ";\n");
-        processos[i].flag_indigenas = (token)? atoi(token) : 0;
-        
-        token = strtok(NULL, ";\n");
-        processos[i].flag_infancia = (token)? atoi(token) : 0;
-        
-        token = strtok(NULL, ";\n");
-        if (token) strncpy(processos[i].decisao, token, sizeof(processos[i].decisao) - 1);
-        
-        token = strtok(NULL, ";\n");
-        if (token) strncpy(processos[i].dt_resolvido, token, sizeof(processos[i].dt_resolvido) - 1);
-        
-        token = strtok(NULL, ";\n");
-        processos[i].cnm1 = (token)? atoi(token) : 0;
-        
-        token = strtok(NULL, ";\n");
-        processos[i].primeirasentm1 = (token)? atoi(token) : 0;
-        
-        token = strtok(NULL, ";\n");
-        processos[i].baixm1 = (token)? atoi(token) : 0;
-        
-        token = strtok(NULL, ";\n");
-        processos[i].decm1 = (token)? atoi(token) : 0;
-        
-        token = strtok(NULL, ";\n");
-        processos[i].mpum1 = (token)? atoi(token) : 0;
-        
-        token = strtok(NULL, ";\n");
-        processos[i].julgadom1 = (token)? atoi(token) : 0;
-        
-        token = strtok(NULL, ";\n");
-        processos[i].desm1 = (token)? atoi(token) : 0;
-        
-        token = strtok(NULL, ";\n");
-        processos[i].susm1 = (token)? atoi(token) : 0;
-        
+        // Preenchimento seguro (com vazios possíveis)
+        processos[i].id_processo      = cols[0][0]  ? atoll(cols[0])  : 0;
+        snprintf(processos[i].numero_sigilo, sizeof(processos[i].numero_sigilo), "%s", cols[1]);
+        snprintf(processos[i].sigla_grau,    sizeof(processos[i].sigla_grau),    "%s", cols[2]);
+        snprintf(processos[i].procedimento,  sizeof(processos[i].procedimento),  "%s", cols[3]);
+        snprintf(processos[i].ramo_justica,  sizeof(processos[i].ramo_justica),  "%s", cols[4]);
+        snprintf(processos[i].sigla_tribunal,sizeof(processos[i].sigla_tribunal),"%s", cols[5]);
+        processos[i].id_tribunal      = cols[6][0]  ? atoi(cols[6])  : 0;
+        processos[i].recurso          = cols[7][0]  ? atoi(cols[7])  : 0;
+        processos[i].id_ultimo_oj     = cols[8][0]  ? atoi(cols[8])  : 0;
+        snprintf(processos[i].dt_recebimento, sizeof(processos[i].dt_recebimento), "%s", cols[9]);
+        processos[i].id_ultima_classe = cols[10][0] ? atoi(cols[10]) : 0;
+
+        processos[i].flag_violencia_domestica = cols[11][0] ? atoi(cols[11]) : 0;
+        processos[i].flag_feminicidio         = cols[12][0] ? atoi(cols[12]) : 0;
+        processos[i].flag_ambiental           = cols[13][0] ? atoi(cols[13]) : 0;
+        processos[i].flag_quilombolas         = cols[14][0] ? atoi(cols[14]) : 0;
+        processos[i].flag_indigenas           = cols[15][0] ? atoi(cols[15]) : 0;
+        processos[i].flag_infancia            = cols[16][0] ? atoi(cols[16]) : 0;
+
+        snprintf(processos[i].decisao,      sizeof(processos[i].decisao),      "%s", cols[17]);
+        snprintf(processos[i].dt_resolvido, sizeof(processos[i].dt_resolvido), "%s", cols[18]);
+
+        processos[i].cnm1            = cols[19][0] ? atoi(cols[19]) : 0;
+        processos[i].primeirasentm1  = cols[20][0] ? atoi(cols[20]) : 0;
+        processos[i].baixm1          = cols[21][0] ? atoi(cols[21]) : 0;
+        processos[i].decm1           = cols[22][0] ? atoi(cols[22]) : 0;
+        processos[i].mpum1           = cols[23][0] ? atoi(cols[23]) : 0;
+        processos[i].julgadom1       = cols[24][0] ? atoi(cols[24]) : 0;
+        processos[i].desm1           = cols[25][0] ? atoi(cols[25]) : 0;
+        processos[i].susm1           = cols[26][0] ? atoi(cols[26]) : 0;
+
         i++;
     }
 
-    *totalProcessos = i;
     fclose(fp);
+    *totalProcessos = i;
     return processos;
 }
 
-// 2. O id_processo do processo com dt_recebimento mais antigo
-void encontrarProcessoMaisAntigo(const Processo *processos, int totalProcessos) {
-    if (totalProcessos == 0) {
-        printf("Nenhum processo encontrado para analise.\n");
-        return;
-    }
+// --- análises ----
 
-    long long int idMaisAntigo = processos[0].id_processo;
-    int dataMaisAntiga = dataParaDias(processos[0].dt_recebimento);
+void encontrarProcessoMaisAntigo(const Processo *processos, int totalProcessos){
+    if (totalProcessos == 0){ puts("Nenhum processo encontrado para analise."); return; }
 
-    for (int i = 1; i < totalProcessos; i++) {
-        int dataAtual = dataParaDias(processos[i].dt_recebimento);
-        if (dataAtual!= -1 && dataAtual < dataMaisAntiga) {
-            dataMaisAntiga = dataAtual;
-            idMaisAntigo = processos[i].id_processo;
+    int idx = -1, menor = -1;
+    for (int i=0;i<totalProcessos;i++){
+        int d = dataParaDias(processos[i].dt_recebimento);
+        if (d != -1 && (menor == -1 || d < menor)){
+            menor = d; idx = i;
         }
     }
-    printf("O id_processo do processo com dt_recebimento mais antigo e: %lld\n", idMaisAntigo);
+    if (idx == -1) puts("Nao foi possivel determinar o mais antigo (todas as datas invalidas).");
+    else printf("O id_processo do processo com dt_recebimento mais antigo e: %lld\n", processos[idx].id_processo);
 }
 
-// 3. O id_ultimo_oj a partir de id_processo
-void encontrarOJPorId(const Processo *processos, int totalProcessos, long long int id_busca) {
-    for (int i = 0; i < totalProcessos; i++) {
-        if (processos[i].id_processo == id_busca) {
+void encontrarOJPorId(const Processo *processos, int totalProcessos, long long int id_busca){
+    for (int i = 0; i < totalProcessos; i++){
+        if (processos[i].id_processo == id_busca){
             printf("O id_ultimo_oj para o processo %lld e: %d\n", id_busca, processos[i].id_ultimo_oj);
             return;
         }
@@ -161,125 +146,58 @@ void encontrarOJPorId(const Processo *processos, int totalProcessos, long long i
     printf("Processo com id %lld nao encontrado.\n", id_busca);
 }
 
-// 4-9. Contadores de flags temáticas
-int contarViolenciaDomestica(const Processo *processos, int totalProcessos) {
-    int contador = 0;
-    for (int i = 0; i < totalProcessos; i++) {
-        contador += processos[i].flag_violencia_domestica;
-    }
-    return contador;
-}
+int contarViolenciaDomestica(const Processo *p, int n){ int c=0; for (int i=0;i<n;i++) c += p[i].flag_violencia_domestica; return c; }
+int contarFeminicidio      (const Processo *p, int n){ int c=0; for (int i=0;i<n;i++) c += p[i].flag_feminicidio; return c; }
+int contarAmbiental        (const Processo *p, int n){ int c=0; for (int i=0;i<n;i++) c += p[i].flag_ambiental; return c; }
+int contarQuilombolas      (const Processo *p, int n){ int c=0; for (int i=0;i<n;i++) c += p[i].flag_quilombolas; return c; }
+int contarIndigenas        (const Processo *p, int n){ int c=0; for (int i=0;i<n;i++) c += p[i].flag_indigenas; return c; }
+int contarInfancia         (const Processo *p, int n){ int c=0; for (int i=0;i<n;i++) c += p[i].flag_infancia; return c; }
 
-int contarFeminicidio(const Processo *processos, int totalProcessos) {
-    int contador = 0;
-    for (int i = 0; i < totalProcessos; i++) {
-        contador += processos[i].flag_feminicidio;
-    }
-    return contador;
-}
-
-int contarAmbiental(const Processo *processos, int totalProcessos) {
-    int contador = 0;
-    for (int i = 0; i < totalProcessos; i++) {
-        contador += processos[i].flag_ambiental;
-    }
-    return contador;
-}
-
-int contarQuilombolas(const Processo *processos, int totalProcessos) {
-    int contador = 0;
-    for (int i = 0; i < totalProcessos; i++) {
-        contador += processos[i].flag_quilombolas;
-    }
-    return contador;
-}
-
-int contarIndigenas(const Processo *processos, int totalProcessos) {
-    int contador = 0;
-    for (int i = 0; i < totalProcessos; i++) {
-        contador += processos[i].flag_indigenas;
-    }
-    return contador;
-}
-
-int contarInfancia(const Processo *processos, int totalProcessos) {
-    int contador = 0;
-    for (int i = 0; i < totalProcessos; i++) {
-        contador += processos[i].flag_infancia;
-    }
-    return contador;
-}
-
-// 10. O número de dias entre dt_recebimento e dt_resolvido
-void calcularDiasResolucao(const Processo *processos, int totalProcessos) {
-    for (int i = 0; i < totalProcessos; i++) {
-        int diasRecebimento = dataParaDias(processos[i].dt_recebimento);
-        int diasResolvido = dataParaDias(processos[i].dt_resolvido);
-
-        if (diasRecebimento!= -1 && diasResolvido!= -1) {
-            int diferenca = diasResolvido - diasRecebimento;
-            printf("Processo %lld: %d dias entre recebimento e resolucao.\n", processos[i].id_processo, diferenca);
-        } else {
-            printf("Processo %lld: Nao foi possivel calcular a diferenca de dias (dados invalidos).\n", processos[i].id_processo);
+void calcularDiasResolucao(const Processo *processos, int totalProcessos){
+    for (int i=0;i<totalProcessos;i++){
+        int dr = dataParaDias(processos[i].dt_recebimento);
+        int dj = dataParaDias(processos[i].dt_resolvido);
+        if (dr != -1 && dj != -1 && dj >= dr){
+            printf("Processo %lld: %d dias entre recebimento e resolucao.\n",
+                   processos[i].id_processo, dj - dr);
+        }else{
+            printf("Processo %lld: Nao foi possivel calcular a diferenca de dias (dados invalidos).\n",
+                   processos[i].id_processo);
         }
     }
 }
 
-// 11. O percentual de cumprimento da meta 1
-void calcularCumprimentoMeta1(const Processo *processos, int totalProcessos) {
-    long long int cnm1_total = 0;
-    long long int julgadom1_total = 0;
-    long long int desm1_total = 0;
-    long long int susm1_total = 0;
-    
-    for(int i = 0; i < totalProcessos; i++){
-        cnm1_total += processos[i].cnm1;
-        julgadom1_total += processos[i].julgadom1;
-        desm1_total += processos[i].desm1;
-        susm1_total += processos[i].susm1;
+void calcularCumprimentoMeta1(const Processo *processos, int totalProcessos){
+    long long cnm1=0, julg=0, desm=0, sus=0;
+    for (int i=0;i<totalProcessos;i++){
+        cnm1 += processos[i].cnm1;
+        julg += processos[i].julgadom1;
+        desm += processos[i].desm1;
+        sus  += processos[i].susm1;
     }
-
-    long long int denominador = cnm1_total + desm1_total - susm1_total;
-
-    if (denominador == 0) {
-        printf("Nao foi possivel calcular a Meta 1, denominador e zero.\n");
-        return;
-    }
-    
-    double cumprimento = ((double)julgadom1_total / denominador) * 100.0;
-    printf("O percentual de cumprimento da Meta 1 e: %.2f%%\n", cumprimento);
+    long long denom = cnm1 + desm - sus; // conforme enunciado
+    if (denom <= 0){ puts("Nao foi possivel calcular a Meta 1, denominador e zero."); return; }
+    double pct = (double)julg / (double)denom * 100.0;
+    printf("O percentual de cumprimento da Meta 1 e: %.2f%%\n", pct);
 }
 
-// 12. Gerar um arquivo CSV com todos os processos julgados (mérito) na Meta 1
-void gerarCSVJulgados(const Processo *processos, int totalProcessos, const char *nomeArquivoSaida) {
+void gerarCSVJulgados(const Processo *p, int n, const char *nomeArquivoSaida){
     FILE *fp = fopen(nomeArquivoSaida, "w");
-    if (fp == NULL) {
-        printf("ERRO: Nao foi possivel criar o arquivo %s.\n", nomeArquivoSaida);
-        return;
-    }
-    
-    // Escreve o cabeçalho
+    if (!fp){ printf("ERRO: Nao foi possivel criar o arquivo %s.\n", nomeArquivoSaida); return; }
     fprintf(fp, "id_processo;numero_sigilo;sigla_grau;procedimento;ramo_justica;sigla_tribunal;id_tribunal;recurso;id_ultimo_oj;dt_recebimento;id_ultima_classe;flag_violencia_domestica;flag_feminicidio;flag_ambiental;flag_quilombolas;flag_indigenas;flag_infancia;decisao;dt_resolvido;cnm1;primeirasentm1;baixm1;decm1;mpum1;julgadom1;desm1;susm1\n");
-
-    int count = 0;
-    for (int i = 0; i < totalProcessos; i++) {
-        if (processos[i].julgadom1 > 0) {
+    int count=0;
+    for (int i=0;i<n;i++){
+        if (p[i].julgadom1 > 0){
             fprintf(fp, "%lld;%s;%s;%s;%s;%s;%d;%d;%d;%s;%d;%d;%d;%d;%d;%d;%d;%s;%s;%d;%d;%d;%d;%d;%d;%d;%d\n",
-                    processos[i].id_processo, processos[i].numero_sigilo, processos[i].sigla_grau,
-                    processos[i].procedimento, processos[i].ramo_justica, processos[i].sigla_tribunal,
-                    processos[i].id_tribunal, processos[i].recurso, processos[i].id_ultimo_oj,
-                    processos[i].dt_recebimento, processos[i].id_ultima_classe,
-                    processos[i].flag_violencia_domestica, processos[i].flag_feminicidio,
-                    processos[i].flag_ambiental, processos[i].flag_quilombolas,
-                    processos[i].flag_indigenas, processos[i].flag_infancia,
-                    processos[i].decisao, processos[i].dt_resolvido,
-                    processos[i].cnm1, processos[i].primeirasentm1, processos[i].baixm1,
-                    processos[i].decm1, processos[i].mpum1, processos[i].julgadom1,
-                    processos[i].desm1, processos[i].susm1);
+                    p[i].id_processo, p[i].numero_sigilo, p[i].sigla_grau, p[i].procedimento,
+                    p[i].ramo_justica, p[i].sigla_tribunal, p[i].id_tribunal, p[i].recurso, p[i].id_ultimo_oj,
+                    p[i].dt_recebimento, p[i].id_ultima_classe, p[i].flag_violencia_domestica, p[i].flag_feminicidio,
+                    p[i].flag_ambiental, p[i].flag_quilombolas, p[i].flag_indigenas, p[i].flag_infancia,
+                    p[i].decisao, p[i].dt_resolvido, p[i].cnm1, p[i].primeirasentm1, p[i].baixm1, p[i].decm1,
+                    p[i].mpum1, p[i].julgadom1, p[i].desm1, p[i].susm1);
             count++;
         }
     }
-
     fclose(fp);
     printf("Gerado arquivo '%s' com %d processos julgados (merito).\n", nomeArquivoSaida, count);
 }
