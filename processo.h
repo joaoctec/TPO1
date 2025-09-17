@@ -5,7 +5,7 @@
 
 #include <time.h>
 
-#define MAX_PROCESSOS 1000
+#define MAX_PROCESSOS 3000000
 #define TAM_LINHA     1024
 #define ERRO          -1
 
