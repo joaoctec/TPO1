@@ -161,7 +161,7 @@ void calcularDiasResolucao(const Processo *processos, int totalProcessos){
             printf("Processo %lld: %d dias entre recebimento e resolucao.\n",
                    processos[i].id_processo, dj - dr);
         }else{
-            printf("Processo %lld: Nao foi possivel calcular a diferenca de dias (dados invalidos).\n",
+            printf("Processo %lld: Nao foi possivel calcular a diferenca de dias (Processo nao finalizado).\n",
                    processos[i].id_processo);
         }
     }
