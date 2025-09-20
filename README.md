@@ -142,11 +142,7 @@ Essas macros permitem medir o tempo de execução de trechos específicos do có
 
 * Retorna a quantidade total de registros lidos.
 
-
-## 4.Cálculo do tempo de resolução
-
-
-## 5.Análises Gerais
+## 4.Análises Gerais
 
 * Identifica o processo mais antigo.
 
@@ -175,16 +171,15 @@ Arquivos Necessários: Deve-se ter os arquivos main.c, processo.c, processo.h, T
 Compilação
 Abra o terminal na pasta do projeto e execute o seguinte comando:
 
-```Bash
 gcc processo.c main.c -o processo.exe
 
 
 
 Execução
 Para rodar o programa, execute o arquivo gerado:
-
 ./processo.exe
 
-```Bash
-```
+## Resultado da Análise
+![WhatsApp Image 2025-09-20 at 16 12 34](https://github.com/user-attachments/assets/a0326f70-d32d-4d0b-bdbb-245d40a3ba3a)
+
 
