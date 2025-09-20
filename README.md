@@ -115,7 +115,7 @@ O arquivo main.c é o ponto de entrada do sistema. Ele coordena a leitura de dad
 Além disso, possui um sistema de cronômetro para medir o tempo de execução de cada etapa crítica, auxiliando na avaliação de desempenho.
 
 ## Estrutura e Principais Componentes
-## 1. Cabeçalhos e Bibliotecas
+1. Cabeçalhos e Bibliotecas
 
 stdio.h e stdlib.h: Entrada e saída padrão, alocação dinâmica de memória.
 
@@ -123,7 +123,7 @@ time.h: Funções de tempo, usadas para implementar o cronômetro.
 
 processo.h: Cabeçalho com a definição da struct Processo e os protótipos das funções utilizadas.
 
-## 2. Macros para Cronômetro
+ 2. Macros para Cronômetro
 
 TIC(var): Inicia uma variável de tempo.
 
@@ -131,7 +131,7 @@ TOC_MS(var): Calcula o tempo decorrido desde a macro TIC, em milissegundos.
 
 Essas macros permitem medir o tempo de execução de trechos específicos do código (ex.: leitura de dados, cálculo da Meta 1).
 
-## 3. Função Principal – main
+ 3. Função Principal – main
 
 * Início do cronômetro total
 * Mede o tempo do programa inteiro.
@@ -141,7 +141,7 @@ Essas macros permitem medir o tempo de execução de trechos específicos do có
 
 * Retorna a quantidade total de registros lidos.
 
-## 4.Análises Gerais
+ 4.Análises Gerais
 
 * Identifica o processo mais antigo.
 
