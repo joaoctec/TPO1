@@ -183,10 +183,8 @@ gcc processo.c main.c -o processo.exe
 Execução
 Para rodar o programa, execute o arquivo gerado:
 
-```Bash
-
-
 ./processo.exe
 
+```Bash
 ```
 
