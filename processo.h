@@ -1,5 +1,6 @@
-// Definição do TAD Processo e protótipos
-
+/* =========================
+ * arquivo: processo.h
+ * ========================= */
 #ifndef PROCESSO_H
 #define PROCESSO_H
 
@@ -54,5 +55,22 @@ void gerarCSVJulgados(const Processo *processos, int totalProcessos, const char 
 
 // util
 int dataParaDias(const char *iso8601); // "YYYY-MM-DD" -> dias desde epoch (ou -1 se vazio/invalid)
+
+/* ======= Novas funções ======= */
+
+// grava todos os (id;dias) em CSV sem lotar o terminal
+void salvarDiasResolucaoCSV(const Processo *processos, int totalProcessos, const char *nomeCSV);
+// mostra apenas uma amostra no console
+void imprimirDiasResolucaoAmostra(const Processo *processos, int totalProcessos, int max_linhas);
+
+// Meta 1 por streaming (lendo diretamente do CSV), com filtro de ano (ex.: 2025).
+// Passe ano<=0 para considerar todos os anos.
+// Retorna o percentual calculado e, opcionalmente, devolve os somatórios usados.
+double calcularCumprimentoMeta1Streaming(const char *nomeArquivo,
+                                         int ano,
+                                         long long *out_cnm1,
+                                         long long *out_julg,
+                                         long long *out_desm,
+                                         long long *out_sus);
 
 #endif

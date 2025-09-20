@@ -1,6 +1,9 @@
+/* =========================
+ * arquivo: main.c
+ * ========================= */
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>      // necessário
+#include <time.h>
 #include "processo.h"
 
 // Cronômetro simples (CPU time, em milissegundos)
@@ -33,10 +36,14 @@ int main(void){
 
         // 2) Cronômetro só do cálculo de datas
         TIC(t_datas);
-        calcularDiasResolucao(processos, total);
+        // Grave tudo em CSV para não cortar no terminal…
+        salvarDiasResolucaoCSV(processos, total, "dias_resolucao.csv");
+        // …e mostre só uma amostra no console:
+        imprimirDiasResolucaoAmostra(processos, total, 20);
+
         double ms_datas = TOC_MS(t_datas);
         print_mm_ss_mmm(ms_datas, "\n[tempo] Dias de resolucao:");
-        
+
         puts("\n------------------------------------------");
         puts("Analise de Dados do Tribunal de Justica do Distrito Federal");
         puts("------------------------------------------\n");
@@ -57,7 +64,15 @@ int main(void){
         printf("Processos relacionadas a infancia e juventude: %d\n", contarInfancia(processos, total));
 
         puts("\n------------------------------------------");
-        calcularCumprimentoMeta1(processos, total);
+        // Cálculo da Meta 1 em TODOS os anos (cumprimento global, como o professor pediu)
+        long long s_cnm1=0, s_julg=0, s_desm=0, s_sus=0;
+        double pct_total = calcularCumprimentoMeta1Streaming("TJDFT_filtrado.csv", 0,
+                                                            &s_cnm1, &s_julg, &s_desm, &s_sus);
+        if (pct_total >= 0.0){
+            printf("O percentual de cumprimento da Meta 1 e: %.2f%%\n", pct_total);
+        } else {
+            puts("Falha no calculo streaming da Meta 1.");
+        }
 
         puts("------------------------------------------\n");
         gerarCSVJulgados(processos, total, "julgado_meta1.csv");
