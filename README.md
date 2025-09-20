@@ -108,8 +108,7 @@ O sistema:
  O resultado  é um índice de 100,52%.
 
 ## main.c
-
-## Visão Geral
+Visão Geral
 
 O arquivo main.c é o ponto de entrada do sistema. Ele coordena a leitura de dados processuais a partir de um arquivo CSV, realiza análises estatísticas, calcula o cumprimento da Meta 1 do CNJ e gera relatórios auxiliares.
 
