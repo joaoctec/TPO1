@@ -35,12 +35,15 @@ static int split_semicolon(char *linha, char **out, int max_cols){
     char *p = linha;
     while (col < max_cols && p){
         char *sep = strchr(p, ';');
-        if (sep){
-            *sep = '\n';           // marca fim temporário
-            strip_crlf(p);
+        if (sep)
+        {
+            *sep = '\0';   // termina o campo com NUL (seguro)
+            strip_crlf(p); // remove CR/LF do fim, se houver
             out[col++] = p;
-            p = sep + 1;
-        }else{
+            p = sep + 1; // próximo campo começa após o ';'
+        }
+        else
+        {
             strip_crlf(p);
             out[col++] = p;
             p = NULL;

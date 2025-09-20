@@ -22,7 +22,7 @@ int main(void){
     // 1) Cronômetro do programa inteiro
     TIC(t_total);
 
-    Processo *processos = lerDados("TJDFT_amostra.csv", &total); // troque o arquivo quando quiser
+    Processo *processos = lerDados("TJDFT_filtrado.csv", &total); // troque o arquivo quando quiser
 
     if (total > 0){
 

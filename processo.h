@@ -6,7 +6,7 @@
 #include <time.h>
 
 #define MAX_PROCESSOS 3000000
-#define TAM_LINHA     1024
+#define TAM_LINHA     32768
 #define ERRO          -1
 
 typedef struct {
