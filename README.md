@@ -1,291 +1,162 @@
+
 # N1 de Estrutura de Dados - Código de Análise de Casos Judiciários do TJDFT em C
 
-Este projeto é um programa em C que analisa um grande volume de dados de processos judiciais do Tribunal de Justiça do Distrito Federal e Territórios (TJDFT) a partir de um arquivo CSV. Ele faz análises quantitativas, gera o relatório de casos por categoria e gera estatísticas de previsão do tempo de resolução, assim ajudando a extrair informações importantes para estudo ou pesquisa.
+Este projeto é um programa em C que analisa um grande volume de dados de processos judiciais do Tribunal de Justiça do Distrito Federal e Territórios (TJDFT) a partir de um arquivo CSV. Ele faz análises quantitativas, gera o relatório de casos por categoria e gera estatísticas de previsão do tempo de resolução, assim ajudando a extrair informações importantes para estudo ou pesquisa. 
 
----
+## 1. Número de Processos 
 
-## Funcionalidades
+A contagem total de processos é realizada diretamente na função `lerDados` em **processo.c**. Essa função lê o arquivo **TJDFT_filtrado.csv** linha por linha e armazena cada processo em um array de struct **Processo**. Uma variável de controle (passada por referência `int *tot`) é incrementada a cada linha lida, retornando o número exato de processos no final da leitura. 
 
-- **Análise de Desempenho:** Calcula o tempo de execução total do programa e o tempo gasto no processamento dos dados.
-- **Leitura de Dados:** Processa um arquivo CSV com mais de 200.000 registros de processos.
+## 2. id_ultimo_oj por id_processo 
 
-- **Contagem de Categorias:** Identifica e conta processos relacionados a:
-  - Causas ambientais
-  - Causas envolvendo quilombolas e indígenas
-  - Violência doméstica, feminicídio, infância e juventude
-- **Análise de Tempo de Resolução:** Calcula o tempo (em dias) entre o início e a resolução de cada processo.
-- **Busca de Dados:** Permite encontrar o processo mais antigo e o "último Órgão Julgador" de um processo específico pelo seu ID.
-- **Cálculo de Meta:** Analisa e calcula o percentual de cumprimento da Meta 1, que visa julgar mais processos do que os que entram.
-- **Geração de Relatório:** Cria um novo arquivo CSV contendo apenas os processos que foram "julgados" de acordo com a Meta 1.
+A função `encontrarOJPorId` foi criada para resolver este problema. 
 
----
+- Onde é criada e chamada: Implementada em **processo.c** e chamada no **main.c**.  
+- Funcionalidade: Recebe o array de processos, o número total de processos e um `id_processo` fornecido pelo usuário via `scanf`. A função percorre o array até encontrar o `id_processo` correspondente e, em seguida, imprime o valor de `id_ultimo_oj`. 
 
-## Estrutura do Projeto
+## 3. id_processo do processo mais antigo 
 
-O projeto é modular e dividido em três arquivos principais:
+Este problema é resolvido pela função `encontrarProcessoMaisAntigo`. 
 
-- `main.c`: A função principal do programa, que orquestra a execução das demais funcionalidades (leitura, análise, contagem e geração de relatórios).
-- `processo.c`: Contém a lógica de todas as funções do projeto, incluindo a leitura de dados, análises, cálculos de meta e contagens.
-- `processo.h`: Define a estrutura de dados `Processo` e os protótipos de todas as funções públicas.
+- Onde é criada e chamada: Implementada em **processo.c** e chamada no **main.c**.  
+- Funcionalidade: A função percorre o array de processos, comparando a data de recebimento de cada um (`dt_recebimento`). Para fazer essa comparação, ela utiliza a função auxiliar `dataParaDias`, que converte a string de data `"YYYY-MM-DD"` em um número inteiro de dias. O processo com o menor número de dias é o mais antigo. 
 
-### 2. Estrutura do Arquivo
+## 4-9. Contagem de processos por categoria 
 
-- `#ifndef PROCESSO_H`
-- `#define PROCESSO_H`
+Para cada categoria (violência doméstica, feminicídio, ambiental, quilombolas, indígenas, infância), uma função de contagem específica foi criada: 
 
-- `#include <time.h>`
+- `contarViolenciaDomestica`  
+- `contarFeminicidio`  
+- `contarAmbiental`  
+- `contarQuilombolas`  
+- `contarIndigenas`  
+- `contarInfancia`  
 
-Proteção contra inclusão múltipla (#ifndef / #define).
-inclusão de <time.h>, necessária para cálculos de datas.
+- Onde são criadas e chamadas: Todas implementadas em **processo.c** e chamadas no **main.c**.  
+- Funcionalidade: Cada função percorre o array de processos e soma o valor de um flag binário (ex: `flag_violencia_domestica`). Como esses flags contêm 1 se a condição é verdadeira e 0 se é falsa, a soma direta resulta na contagem total de processos para aquela categoria. 
 
-- `#define MAX_PROCESSOS 3000000`
-- `#define TAM_LINHA     1024`
-- `#define ERRO          -1`
+## 10. Dias entre dt_recebimento e dt_resolvido 
 
-MAX_PROCESSOS: limite máximo de registros suportados (3 milhões).
+O cálculo da diferença de dias é feito na função `mostrarComparacaoDatasPorId`. 
 
-TAM_LINHA: tamanho máximo de uma linha lida do CSV (1024 caracteres).
+- Onde é criada e chamada: Implementada em **processo.c** e chamada no **main.c**.  
+- Funcionalidade: Similar à busca de `id_ultimo_oj`, esta função recebe o `id_processo` do usuário. Ela localiza o processo e usa `dataParaDias` para converter as datas de recebimento e resolução em inteiros. A diferença entre os dois inteiros é o número de dias. Se as datas forem inválidas ou o processo não estiver resolvido, uma mensagem de erro apropriada é exibida.  
 
-ERRO: valor de retorno padrão para indicar falha em operações.
+A versão original `calcularDiasResolucao` foi criada para mostrar todas as comparações do processo em outro arquivo CSV, mas por causa do tempo de execução e a dificuldade de se achar um `id_processo` específico decidimos criar uma nova função, que oferece uma forma interativa e mais específica de consulta, sem a necessidade de gerar um novo arquivo. 
 
-A estrutura Processo contém 27 variáveis, sendo responsável por armazenar todas as informações de uma linha do arquivo CSV.
+## Estruturação do Código e Análise do CSV  
 
-Cada campo reflete uma informação processual, como:
+O projeto é estruturado em três arquivos para promover a modularidade e organização. 
 
-- id_processo: identificador único do processo.
+- **processo.h:** O cabeçalho. Serve como uma "interface" para o resto do código. Ele define a estrutura de dados **Processo**, que atua como um molde para cada linha do CSV, e declara os protótipos de todas as funções que serão usadas. As constantes `MAX_PROCESSOS`, `TAM_LINHA` e `ERRO` também são definidas aqui.  
+- **processo.c:** O arquivo de implementação. É aqui que a "lógica" de cada função declarada em `processo.h` é escrita. Ele inclui funções para leitura de arquivo, análise de dados e cálculos.  
+- **main.c:** O arquivo principal. Contém a função `main`, que coordena todas as ações. Ele chama as funções de `processo.c` na ordem correta, interage com o usuário para obter dados de entrada e imprime os resultados. 
 
-- numero_sigilo: número ou código com eventual sigilo.
+## O Struct Processo 
 
-- sigla_grau: grau de jurisdição (ex.: “1G” para primeira instância).
+A `struct Processo` foi declarada em **processo.h** para agrupar as 27 colunas de dados de cada processo em uma única variável. Isso melhora a abstração do problema, pois em vez de lidar com 27 variáveis separadas, o programa manipula apenas uma estrutura de dados. 
 
-- procedimento: tipo de procedimento.
-
-- ramo_justica: ramo da justiça (ex.: trabalhista, penal, cível).
-
-- sigla_tribunal / id_tribunal: identificadores do tribunal.
-
-- recurso: indica se houve recurso.
-
-- id_ultimo_oj: último órgão julgador.
-
-- dt_recebimento: data de recebimento no formato "YYYY-MM-DD".
-
-- flags (flag_violencia_domestica, flag_feminicidio, etc.): marcadores de situações especiais.
-
-- decisao: texto curto com a decisão judicial.
-
-- dt_resolvido: data de resolução do processo.
-
-- Campos cnm1, primeirasentm1, baixm1, decm1, mpum1, julgadom1, desm1, susm1: métricas relacionadas ao cumprimento da Meta 1 do CNJ.
-
-## Análise de Dados e Lógica de Negócio
-
-Leitura de CSV: A função lerDados lê o arquivo CSV linha por linha, separando os campos pelo delimitador ponto e vírgula (:).
-
-Data Parsing: A função utilitária dataParaDias converte strings de data no formato "YYYY-MM-DD" para um número de dias a partir de "1970-01-01", facilitando o cálculo de diferenças de tempo.
-
-Contagem de Categorias: Funções como contarViolenciaDomestica e contarFeminicidio percorrem o array de processos e somam os valores dos flags binários (flag_violencia_domestica, flag_feminicidio, etc.) para indicar a presença daquele tipo de ocorrência.
-
-Cálculo da Meta 1: A função calcularCumprimentoMeta1 implementa a fórmula: percentual = (julgadom1 / (cnm1 + desm1 - susm1)) \* 100.
-
-Geração de CSV: A função gerarCSVJulgados opera sobre o array de processos e escreve em um novo arquivo CSV apenas os registros que possuem o flag julgadom1 com valor maior que 0.
-
-## Abstração de Funções no Projeto TJDFT
-
-Este projeto foi estruturado de forma modular para analisar processos judiciais a partir de um CSV filtrado (`TJDFT_filtrado.csv`).
-A lógica foi abstraída em funções reutilizáveis que estão definidas em `processo.c` e `processo.h`, sendo chamadas a partir do `main.c`.
-
-## Número total de processos
-
-- Função envolvida: `lerDados`
-
-- Arquivo: `processo.c`
-
-- Descrição: lê o arquivo CSV e retorna um vetor de Processo, além de preencher a variável `total` com a quantidade de registros.
-
-- Uso no código: Linha `Processo *ps = lerDados("TJDFT_filtrado.csv", &total);` no `main.c`.
-
-## `id_ultimo_oj` a partir de `id_processo`
-
-- Função envolvida: `encontrarOJPorId`
-
-- Entrada do usuário: feita com `scanf` no `main`.c.
-
-- Descrição: busca no vetor o processo pelo `id_processo` informado e mostra o valor de `id_ultimo_oj.`
-
-## Processo mais antigo
-
-- Função envolvida: `encontrarProcessoMaisAntigo`
-
-- Descrição: percorre o vetor e identifica o menor valor em `dt_recebimento`, exibindo o `id_processo` correspondente.
-
-## Contagens de categorias (flags)
-
-- ` Funções envolvidas`
-
-- ` contarViolenciaDomestica`
-
-- ` contarFeminicidio`
-
-- ` contarAmbiental`
-
-- ` contarQuilombolas`
-
-- ` contarIndigenas`
-
-- ` contarInfancia`
-
-Descrição: cada função percorre o vetor e soma os processos com o respectivo flag definido como `1`.
-
-Uso no código: chamadas sequenciais no `main.c`.
-
-## Dias entre `dt_recebimento `e `dt_resolvido`
-
-Funções envolvid`as:
-
-`salvarDiasResolucaoCSV ` → gera um arquivo CSV com os dias de resolução de cada processo.
-
-`imprimirDiasResolucaoAmostra `→ mostra apenas uma amostra no terminal para não poluir a saída.
-
-Observação: essa funcionalidade não estava no enunciado, mas foi implementada para enriquecer a análise.
-
-## Percentual de cumprimento da Meta 1
-
-Função envolvida: `calcularCumprimentoMeta1Streaming`
-
-Descrição: calcula o percentual de processos julgados sobre os recebidos.
-
-Importante: o valor pode ultrapassar 100%, como `100.52%`, dependendo do conjunto de dados.
-
-Uso no código:
-
-```Bash
-
-
-double pct = calcularCumprimentoMeta1Streaming("TJDFT_filtrado.csv", 0, &s_c, &s_j, &s_d, &s_s);
-
+```c
+typedef struct{ 
+    long long id_processo; 
+    char numero_sigilo[128], sigla_grau[8], procedimento[128], ramo_justica[64], sigla_tribunal[16]; 
+    int id_tribunal, recurso, id_ultimo_oj; 
+    char dt_recebimento[11]; 
+    int id_ultima_classe; 
+    int flag_violencia_domestica, flag_feminicidio, flag_ambiental, flag_quilombolas, flag_indigenas, flag_infancia; 
+    char decisao[64], dt_resolvido[11]; 
+    int cnm1, primeirasentm1, baixm1, decm1, mpum1, julgadom1, desm1, susm1; 
+} Processo; 
 ```
 
-```Bash
+## Leitura e Análise do CSV 
 
-printf("O percentual de cumprimento da Meta 1 e: %.2f%%\n", pct);
+A função `lerDados` em **processo.c** é a chave para a análise do arquivo CSV. 
 
+1. Ela tenta abrir o arquivo (**"TJDFT_filtrado.csv"**).  
+2. Lê a linha de cabeçalho e a descarta.  
+3. Usa um loop `while` para ler cada linha do arquivo.  
+4. Para cada linha, a função auxiliar `split_semicolon` a divide em campos, usando o ponto e vírgula `;` como delimitador.  
+5. Os campos são convertidos para o tipo de dado correto (ex: `atoll` para `long long`, `atoi` para `int`) e armazenados em uma struct **Processo**.  
+6. A struct preenchida é adicionada a um array dinâmico de **Processo** (`Processo *p`).  
+
+Para ler um arquivo CSV diferente, basta alterar a string `"TJDFT_filtrado.csv"` na chamada da função `lerDados` no **main.c**: 
+
+```c
+Processo *ps = lerDados("TJDFT_filtrado.csv", &total); 
 ```
 
-## Geração de CSV de julgados
+## Criação do Arquivo Meta e Meta 1  
 
-Função envolvida:` gerarCSVJulgados`
+A Meta 1 do Conselho Nacional de Justiça (CNJ) é um indicador de produtividade que mede a capacidade de um tribunal de julgar mais processos do que os que entram. O cálculo da meta foi implementado no código de duas maneiras: uma em memória e outra por streaming (mais eficiente para arquivos grandes). 
 
-Descrição: cria um novo arquivo julgado_meta1.csv contendo apenas os processos `julgados` de acordo com a Meta 1.
+## 11. Percentual de Cumprimento da Meta 1 
 
-Finalidade: disponibilizar um dataset reduzido para análises posteriores.
+A função `calcularCumprimentoMeta1Streaming` é usada para este cálculo. 
 
-## Estruturação do Código
+- Lógica e Fórmula: A função lê o arquivo CSV sem carregar todos os dados para a memória, o que a torna ideal para arquivos grandes. Ela soma os valores de quatro campos específicos de cada linha:  
+  - `julgadom1`: Processos julgados (numerador)  
+  - `cnm1`: Processos conhecidos  
+  - `desm1`: Processos que foram baixados  
+  - `susm1`: Processos suspensos, a fórmula utilizada é:
+    
+    <img width="331" height="30" alt="Percentual" src="https://github.com/user-attachments/assets/b2192846-c231-43ae-9a1a-d0bee74d5019" />
+  
+    Especificações do pc do membro João Cesar, utilizados para imagem do tempo de execução:
 
-`processo.h `: contém a definição da struct `Processo ` (com 26 variáveis) e os protótipos das funções.
+- Resultado: O índice reflete o percentual de cumprimento da meta. Um valor acima de 100% indica que o tribunal julgou mais processos do que os que entraram. 
 
-`processo.c `: implementa toda a lógica das funções.
+## 12. Geração do CSV de Processos Julgados 
 
-`main.c `: coordena a execução, chama as funções em ordem e interage com o usuário.
+A função `gerarCSVJulgados` foi criada para este fim. 
 
-## Observação sobre o CSV
+- Funcionalidade: Percorre todo o array de processos em memória. Para cada processo onde o campo `julgadom1` for maior que 0, a função escreve todos os seus dados em um novo arquivo chamado **"julgado_meta1.csv"**.  
+- Construção do Cabeçalho: A primeira linha do novo CSV é um cabeçalho que lista todas as colunas, exatamente como no arquivo de origem. Isso garante que o novo arquivo seja facilmente legível por qualquer programa de planilhas ou análise de dados. 
 
-O arquivo é aberto dentro da função `lerDados `usando `fopen`.
+## Teste, Orquestramento e Tempo de Execução  
 
-Cada linha é lida, dividida em campos e armazenada em um elemento do vetor de `Processo`.
+O grupo de desenvolvimento se dividiu para otimizar o trabalho: 
 
-Para trocar o arquivo de entrada, basta alterar esta linha no `main.c`:
+- João César e Davi Rodrigues: Ficaram responsáveis pelo desenvolvimento e implementação do código principal em **processo.c** e **main.c**.  
+- Lucas Daniel, Carlos Augustus e Davi: Ficaram responsáveis pela documentação detalhada e pela análise dos resultados, incluindo a medição de desempenho e a criação do arquivo **processo.h**.  
 
-```Bash
+## Medição do Tempo de Execução 
 
-Processo *ps = lerDados("TJDFT_filtrado.csv", &total);
+O tempo de execução do programa é medido usando a biblioteca `<time.h>`.  
 
-```
+- A macro `TIC(v)` armazena o tempo inicial.  
+- A macro `TOC_MS(v)` calcula o tempo decorrido em milissegundos.  
+- A função `print_mm_ss_mmm` formata o resultado de forma legível (min:seg.ms).
 
-## Meta 1 do CNJ
+  Tempo de execução do código do computador do integrante João César,
+  
+    - <img width="340" height="26" alt="image" src="https://github.com/user-attachments/assets/c859c3a5-53fb-4b6e-8466-45c8b729eca7" />
 
-A Meta 1 é o foco principal da análise, que avalia o julgamento de processos mais antigos em cada tribunal.
-O sistema:
+  Especificações do pc do membro João Cesar, utilizados para imagem do  tempo de execução:
 
-- 1.Identifica processos enquadrados na meta.
+    - <img width="667" height="57" alt="image" src="https://github.com/user-attachments/assets/c7002705-c7dc-48bf-bd0c-179010d0fb74" />
 
-- 2.Avalia critérios de julgamento e movimentações.
+  Tempo de execução do código do computador do integrante Lucas Daniel,
 
-- 3.Calcula a taxa de cumprimento.
+    - <img width="382" height="25" alt="image" src="https://github.com/user-attachments/assets/a6b2e9f2-aeaf-446f-9639-1febfe903136" />
 
-O resultado é um índice de 100,52%.
+  Especificações do pc do membro Lucas Daniel, utilizados para imagem do tempo de execução
+  
+    - <img width="527" height="42" alt="image" src="https://github.com/user-attachments/assets/b1195561-f195-453b-b61b-7aef01bf180f" />
 
-## main.c
+  Tempo de execução do código do computador da Universidade,
 
-Visão Geral
+    - <img width="336" height="31" alt="image" src="https://github.com/user-attachments/assets/0a47f7ed-59b6-4458-8029-d39a9d94ae70" />
 
-O arquivo main.c é o ponto de entrada do sistema. Ele coordena a leitura de dados processuais a partir de um arquivo CSV, realiza análises estatísticas, calcula o cumprimento da Meta 1 do CNJ e gera relatórios auxiliares.
+  Especificações do pc da Universidade, utilizados para imagem do tempo de execução:
 
-Além disso, possui um sistema de cronômetro para medir o tempo de execução de cada etapa crítica, auxiliando na avaliação de desempenho.
+    - <img width="460" height="71" alt="image" src="https://github.com/user-attachments/assets/8410ae7b-cf2a-4d07-81bb-3de19d13339b" />
 
-## Estrutura e Principais Componentes
+Essa implementação permite medir o tempo total do programa, bem como o tempo de execução de blocos de código específicos, como a leitura de dados. Isso foi crucial para verificar se o programa está rodando de forma eficiente e identificar gargalos de desempenho.  
 
-1. Cabeçalhos e Bibliotecas
+O esqueleto do código é a estrutura de arquivos e dependências que garante a modularidade: **processo.h** (cabeçalho) define o que as funções fazem, **processo.c** (implementação) define como elas funcionam, e **main.c** (orquestrador) as chama na ordem correta. As constantes e macros, como `MAX_PROCESSOS` e `TIC`, são usadas em diferentes arquivos para manter uma estrutura coesa e consistente.  
 
-stdio.h e stdlib.h: Entrada e saída padrão, alocação dinâmica de memória.
+## Saída do terminal esperada
 
-time.h: Funções de tempo, usadas para implementar o cronômetro.
+<img width="672" height="624" alt="image" src="https://github.com/user-attachments/assets/8f47a172-064e-4e3b-a92a-1c77200c23f4" />
 
-processo.h: Cabeçalho com a definição da struct Processo e os protótipos das funções utilizadas.
-
-2.  Macros para Cronômetro
-
-TIC(var): Inicia uma variável de tempo.
-
-TOC_MS(var): Calcula o tempo decorrido desde a macro TIC, em milissegundos.
-
-Essas macros permitem medir o tempo de execução de trechos específicos do código (ex.: leitura de dados, cálculo da Meta 1).
-
-3.  Função Principal – main
-
-- Início do cronômetro total
-- Mede o tempo do programa inteiro.
-- Lê o arquivo CSV.
-
-- Armazena cada linha em uma instância da struct Processo.
-
-- Retorna a quantidade total de registros lidos.
-
-  4.Análises Gerais
-
-- Identifica o processo mais antigo.
-
-- Localiza um processo por ID.
-
-- Conta processos por categorias temáticas:
-
-- Violência doméstica
-
-- Feminicídio
-
-- Causas ambientais
-
-- Comunidades quilombolas
-
-- Povos indígenas
-
-- Infância e juventude
-
-## Compilação e Execução
-
-Pré-requisitos: Possuir o GCC (ou um compilador C compatível) instalado na sua máquina.
-
-Arquivos Necessários: Deve-se ter os arquivos main.c, processo.c, processo.h, TJDFT_filtrado.csv e TJDF_amostra.csv e eles devem ficar na mesma pasta
-
-Compilação
-Abra o terminal na pasta do projeto e execute o seguinte comando:
-
-gcc processo.c main.c -o processo.exe
-
-Execução
-Para rodar o programa, execute o arquivo gerado:
-./processo.exe
-
-## Resultado da Análise
-
-![WhatsApp Image 2025-09-20 at 16 12 34](https://github.com/user-attachments/assets/a0326f70-d32d-4d0b-bdbb-245d40a3ba3a)
